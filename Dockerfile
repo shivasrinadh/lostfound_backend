@@ -24,6 +24,9 @@ WORKDIR /app
 # Copy the jar file from build stage
 COPY --from=build /app/target/*.jar app.jar
 
+# Create upload directories at container startup path.
+RUN mkdir -p uploads/images uploads/documents
+
 # Expose port 8080
 EXPOSE 8080
 
