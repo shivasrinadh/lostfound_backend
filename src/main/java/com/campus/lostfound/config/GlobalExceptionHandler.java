@@ -4,8 +4,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.jdbc.CannotGetJdbcConnectionException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -52,6 +54,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleDataIntegrity(DataIntegrityViolationException ex) {
         return buildError(HttpStatus.CONFLICT,
                 "Resource conflict: username or email may already exist",
+                null);
+    }
+
+    @ExceptionHandler({ CannotGetJdbcConnectionException.class, DataAccessResourceFailureException.class })
+    public ResponseEntity<Map<String, Object>> handleDbConnectionFailure(Exception ex) {
+        return buildError(HttpStatus.SERVICE_UNAVAILABLE,
+                "Database connection is unavailable. Check datasource environment variables and database access.",
                 null);
     }
 

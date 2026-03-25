@@ -49,6 +49,7 @@ public class ItemService {
 
     // ── Read ──────────────────────────────────────────────────────────
 
+    @Transactional(readOnly = true)
     public Page<ItemDTO> getAllItems(Item.ItemType type, Item.Status status,
             Item.Category category, String keyword,
             Pageable pageable) {
@@ -57,10 +58,12 @@ public class ItemService {
                 .map(ItemDTO::fromEntity);
     }
 
+    @Transactional(readOnly = true)
     public ItemDTO getItemById(Long id) {
         return ItemDTO.fromEntity(findItem(id));
     }
 
+    @Transactional(readOnly = true)
     public Page<ItemDTO> getMyItems(String username, Pageable pageable) {
         User user = findUser(username);
         Long userId = Objects.requireNonNull(user.getId());
