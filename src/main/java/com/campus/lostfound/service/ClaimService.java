@@ -123,6 +123,7 @@ public class ClaimService {
         }
     }
 
+    @Transactional(readOnly = true)
     public List<ClaimDTO> getClaimsForItem(Long itemId) {
         return claimRepository.findByItemId(itemId)
                 .stream()
@@ -130,6 +131,7 @@ public class ClaimService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public Page<ClaimDTO> getMyClaims(String username, Pageable pageable) {
         User user = findUser(username);
         Long userId = Objects.requireNonNull(user.getId());
@@ -138,6 +140,7 @@ public class ClaimService {
                 .map(ClaimDTO::fromEntity);
     }
 
+    @Transactional(readOnly = true)
     public Page<ClaimDTO> getAllClaims(Claim.ClaimStatus status, Pageable pageable) {
         if (status != null) {
             return claimRepository.findByStatus(status, pageable)
