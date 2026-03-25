@@ -5,6 +5,7 @@ import com.campus.lostfound.dto.LoginRequest;
 import com.campus.lostfound.dto.RegisterRequest;
 import com.campus.lostfound.model.User;
 import com.campus.lostfound.repository.UserRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -24,34 +25,43 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
 
     public AuthService(UserRepository userRepository,
-                       PasswordEncoder passwordEncoder,
-                       JwtConfig jwtConfig,
-                       AuthenticationManager authenticationManager) {
-        this.userRepository      = userRepository;
-        this.passwordEncoder     = passwordEncoder;
-        this.jwtConfig           = jwtConfig;
+            PasswordEncoder passwordEncoder,
+            JwtConfig jwtConfig,
+            AuthenticationManager authenticationManager) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtConfig = jwtConfig;
         this.authenticationManager = authenticationManager;
     }
 
     // ── Register ──────────────────────────────────────────────────────
 
     public Map<String, Object> register(RegisterRequest request) {
-        if (userRepository.existsByUsername(request.getUsername())) {
+        String username = request.getUsername().trim();
+        String email = request.getEmail().trim().toLowerCase();
+
+        if (userRepository.existsByUsername(username)) {
             throw new IllegalArgumentException("Username already taken");
         }
-        if (userRepository.existsByEmail(request.getEmail())) {
+        if (userRepository.existsByEmail(email)) {
             throw new IllegalArgumentException("Email already registered");
         }
 
         User user = User.builder()
-                .username(request.getUsername())
-                .email(request.getEmail())
+                .username(username)
+                .email(email)
                 .password(passwordEncoder.encode(request.getPassword()))
                 .phone(request.getPhone())
                 .role(User.Role.USER)
                 .build();
 
-        User savedUser = userRepository.save(user);
+        User savedUser;
+        try {
+            savedUser = userRepository.save(user);
+        } catch (DataIntegrityViolationException ex) {
+            throw new IllegalStateException("Username or email already registered");
+        }
+
         String token = generateToken(savedUser);
         return buildAuthResponse(savedUser, token);
     }
@@ -76,18 +86,17 @@ public class AuthService {
         var userDetails = new org.springframework.security.core.userdetails.User(
                 user.getUsername(),
                 user.getPassword(),
-                List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
-        );
+                List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())));
         return jwtConfig.generateToken(userDetails);
     }
 
     private Map<String, Object> buildAuthResponse(User user, String token) {
         Map<String, Object> response = new HashMap<>();
-        response.put("token",    token);
-        response.put("userId",   user.getId());
+        response.put("token", token);
+        response.put("userId", user.getId());
         response.put("username", user.getUsername());
-        response.put("email",    user.getEmail());
-        response.put("role",     user.getRole().name());
+        response.put("email", user.getEmail());
+        response.put("role", user.getRole().name());
         return response;
     }
 }

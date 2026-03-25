@@ -2,6 +2,7 @@ package com.campus.lostfound.config;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -36,6 +37,13 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.CONFLICT, ex.getMessage(), null);
     }
 
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleDataIntegrity(DataIntegrityViolationException ex) {
+        return buildError(HttpStatus.CONFLICT,
+                "Resource conflict: username or email may already exist",
+                null);
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<Map<String, Object>> handleAccessDenied(AccessDeniedException ex) {
         return buildError(HttpStatus.FORBIDDEN, ex.getMessage(), null);
@@ -48,13 +56,13 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<Map<String, Object>> buildError(HttpStatus status,
-                                                            String message,
-                                                            Object details) {
+            String message,
+            Object details) {
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now().toString());
-        body.put("status",    status.value());
-        body.put("error",     status.getReasonPhrase());
-        body.put("message",   message);
+        body.put("status", status.value());
+        body.put("error", status.getReasonPhrase());
+        body.put("message", message);
         if (details != null) {
             body.put("details", details);
         }
