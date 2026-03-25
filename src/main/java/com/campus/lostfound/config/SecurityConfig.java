@@ -5,6 +5,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.lang.NonNull;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -91,6 +92,7 @@ public class SecurityConfig {
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/uploads/**").permitAll() // important for document/image preview
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/items/my").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/items/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
@@ -112,9 +114,9 @@ public class SecurityConfig {
         }
 
         @Override
-        protected void doFilterInternal(HttpServletRequest request,
-                HttpServletResponse response,
-                FilterChain filterChain)
+        protected void doFilterInternal(@NonNull HttpServletRequest request,
+                @NonNull HttpServletResponse response,
+                @NonNull FilterChain filterChain)
                 throws ServletException, IOException {
 
             final String authHeader = request.getHeader("Authorization");

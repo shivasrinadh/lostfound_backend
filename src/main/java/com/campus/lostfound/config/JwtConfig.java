@@ -5,11 +5,16 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.security.Key;
+import java.security.MessageDigest;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -18,11 +23,35 @@ import java.util.function.Function;
 @Component
 public class JwtConfig {
 
+    private static final String INSECURE_DEFAULT_SECRET = "change-this-in-production";
+
     @Value("${jwt.secret}")
     private String secretKey;
 
     @Value("${jwt.expiration}")
     private long jwtExpiration;
+
+    private final Environment environment;
+
+    public JwtConfig(Environment environment) {
+        this.environment = environment;
+    }
+
+    @PostConstruct
+    void validateSecretConfiguration() {
+        boolean nonProductionProfile = Arrays.stream(environment.getActiveProfiles())
+                .map(String::toLowerCase)
+                .anyMatch(profile -> profile.equals("dev") || profile.equals("local") || profile.equals("test"));
+
+        if (nonProductionProfile) {
+            return;
+        }
+
+        if (secretKey == null || secretKey.isBlank() || INSECURE_DEFAULT_SECRET.equals(secretKey)) {
+            throw new IllegalStateException(
+                    "JWT_SECRET must be set to a strong value in non-dev environments.");
+        }
+    }
 
     // ── Extract ───────────────────────────────────────────────────────
 
@@ -72,7 +101,23 @@ public class JwtConfig {
     // ── Key ───────────────────────────────────────────────────────────
 
     private Key getSignInKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+        byte[] keyBytes;
+        try {
+            keyBytes = Decoders.BASE64.decode(secretKey);
+        } catch (IllegalArgumentException ex) {
+            // Fallback for non-Base64 secrets: derive a stable 32-byte key using SHA-256.
+            keyBytes = sha256(secretKey);
+        }
+
         return Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    private byte[] sha256(String value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return digest.digest(value.getBytes(StandardCharsets.UTF_8));
+        } catch (Exception ex) {
+            throw new IllegalStateException("Unable to build JWT signing key", ex);
+        }
     }
 }

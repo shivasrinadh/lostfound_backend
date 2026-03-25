@@ -11,8 +11,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.util.Objects;
 
 @Component
+@SuppressWarnings("null")
 public class DataSeeder implements CommandLineRunner {
 
         private static final Logger log = LoggerFactory.getLogger(DataSeeder.class);
@@ -37,32 +39,32 @@ public class DataSeeder implements CommandLineRunner {
                 }
 
                 // ── Users ──────────────────────────────────────────────────────
-                userRepository.save(User.builder()
+                Objects.requireNonNull(userRepository.save(User.builder()
                                 .username("admin")
                                 .email("admin@campus.edu")
                                 .password(passwordEncoder.encode("admin123"))
                                 .phone("9000000001")
                                 .role(User.Role.ADMIN)
-                                .build());
+                                .build()));
 
-                User alice = userRepository.save(User.builder()
+                User alice = Objects.requireNonNull(userRepository.save(User.builder()
                                 .username("alice")
                                 .email("alice@campus.edu")
                                 .password(passwordEncoder.encode("alice123"))
                                 .phone("9000000002")
                                 .role(User.Role.USER)
-                                .build());
+                                .build()));
 
-                User bob = userRepository.save(User.builder()
+                User bob = Objects.requireNonNull(userRepository.save(User.builder()
                                 .username("bob")
                                 .email("bob@campus.edu")
                                 .password(passwordEncoder.encode("bob123"))
                                 .phone("9000000003")
                                 .role(User.Role.USER)
-                                .build());
+                                .build()));
 
                 // ── Items ──────────────────────────────────────────────────────
-                itemRepository.save(Item.builder()
+                Objects.requireNonNull(itemRepository.save(Item.builder()
                                 .title("Black Laptop Bag")
                                 .description("Lost near the library entrance. Has a red sticker on the zip.")
                                 .location("Main Library")
@@ -71,9 +73,9 @@ public class DataSeeder implements CommandLineRunner {
                                 .status(Item.Status.OPEN)
                                 .dateOccurred(LocalDate.now().minusDays(2))
                                 .reportedBy(alice)
-                                .build());
+                                .build()));
 
-                itemRepository.save(Item.builder()
+                Objects.requireNonNull(itemRepository.save(Item.builder()
                                 .title("Samsung Galaxy S23")
                                 .description("Found near the cafeteria. Screen cracked on the corner.")
                                 .location("Central Cafeteria")
@@ -82,9 +84,9 @@ public class DataSeeder implements CommandLineRunner {
                                 .status(Item.Status.OPEN)
                                 .dateOccurred(LocalDate.now().minusDays(1))
                                 .reportedBy(bob)
-                                .build());
+                                .build()));
 
-                itemRepository.save(Item.builder()
+                Objects.requireNonNull(itemRepository.save(Item.builder()
                                 .title("Blue Water Bottle")
                                 .description("Nalgene bottle, blue with campus stickers.")
                                 .location("Sports Complex - Gym")
@@ -93,9 +95,9 @@ public class DataSeeder implements CommandLineRunner {
                                 .status(Item.Status.OPEN)
                                 .dateOccurred(LocalDate.now())
                                 .reportedBy(alice)
-                                .build());
+                                .build()));
 
-                itemRepository.save(Item.builder()
+                Objects.requireNonNull(itemRepository.save(Item.builder()
                                 .title("Student ID Card")
                                 .description("Found on the ground near Block B. Name: Rahul K.")
                                 .location("Block B Corridor")
@@ -104,7 +106,7 @@ public class DataSeeder implements CommandLineRunner {
                                 .status(Item.Status.OPEN)
                                 .dateOccurred(LocalDate.now())
                                 .reportedBy(bob)
-                                .build());
+                                .build()));
 
                 log.info("===== Seed Data Loaded =====");
                 log.info("  Admin  → username: admin  / password: admin123");

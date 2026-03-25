@@ -11,7 +11,10 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Objects;
+
 @Service
+@SuppressWarnings("null")
 public class ItemService {
 
     private final ItemRepository itemRepository;
@@ -40,14 +43,15 @@ public class ItemService {
                 .reportedBy(user)
                 .build();
 
-        return ItemDTO.fromEntity(itemRepository.save(item));
+        Item saved = Objects.requireNonNull(itemRepository.save(item));
+        return ItemDTO.fromEntity(saved);
     }
 
     // ── Read ──────────────────────────────────────────────────────────
 
     public Page<ItemDTO> getAllItems(Item.ItemType type, Item.Status status,
-                                     Item.Category category, String keyword,
-                                     Pageable pageable) {
+            Item.Category category, String keyword,
+            Pageable pageable) {
         return itemRepository
                 .searchItems(type, status, category, keyword, pageable)
                 .map(ItemDTO::fromEntity);
@@ -59,8 +63,9 @@ public class ItemService {
 
     public Page<ItemDTO> getMyItems(String username, Pageable pageable) {
         User user = findUser(username);
-        return itemRepository.findByReportedById(user.getId(), pageable)
-                             .map(ItemDTO::fromEntity);
+        Long userId = Objects.requireNonNull(user.getId());
+        return itemRepository.findByReportedById(userId, pageable)
+                .map(ItemDTO::fromEntity);
     }
 
     // ── Update ────────────────────────────────────────────────────────
@@ -88,7 +93,8 @@ public class ItemService {
             item.setStatus(dto.getStatus());
         }
 
-        return ItemDTO.fromEntity(itemRepository.save(item));
+        Item updated = Objects.requireNonNull(itemRepository.save(item));
+        return ItemDTO.fromEntity(updated);
     }
 
     // ── Delete ────────────────────────────────────────────────────────

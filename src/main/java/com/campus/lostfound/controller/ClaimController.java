@@ -138,19 +138,20 @@ public class ClaimController {
         }
 
         try {
-            String statusValue = body == null ? null : body.get("status");
-            if (!StringUtils.hasText(statusValue)) {
+            String rawStatus = body == null ? null : body.get("status");
+            if (!StringUtils.hasText(rawStatus)) {
                 return badRequest("status is required.");
             }
+            String statusValue = rawStatus == null ? "" : rawStatus.trim().toUpperCase();
 
             Claim.ClaimStatus resolution;
             try {
-                resolution = Claim.ClaimStatus.valueOf(statusValue.trim().toUpperCase());
+                resolution = Claim.ClaimStatus.valueOf(statusValue);
             } catch (Exception e) {
                 return badRequest("Invalid claim status.");
             }
 
-            String adminNote = body.getOrDefault("adminNote", null);
+            String adminNote = body == null ? null : body.get("adminNote");
             ClaimDTO dto = claimService.resolveClaim(id, resolution, adminNote, username);
             return ResponseEntity.ok(dto);
 

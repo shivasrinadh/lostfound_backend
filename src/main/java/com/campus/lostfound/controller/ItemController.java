@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,103 +26,130 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/items")
 public class ItemController {
 
-    private final ItemService itemService;
+        private final ItemService itemService;
 
-    public ItemController(ItemService itemService) {
-        this.itemService = itemService;
-    }
+        public ItemController(ItemService itemService) {
+                this.itemService = itemService;
+        }
 
-    /**
-     * GET /api/items
-     * Public — paginated list with optional filters.
-     *
-     * @param type     LOST | FOUND
-     * @param status   OPEN | CLAIMED | CLOSED
-     * @param category ELECTRONICS | CLOTHING | BAGS | …
-     * @param keyword  full-text search on title / description / location
-     * @param page     0-based page index  (default 0)
-     * @param size     page size           (default 10)
-     */
-    @GetMapping
-    public ResponseEntity<Page<ItemDTO>> getAllItems(
-            @RequestParam(required = false) Item.ItemType  type,
-            @RequestParam(required = false) Item.Status    status,
-            @RequestParam(required = false) Item.Category  category,
-            @RequestParam(required = false) String         keyword,
-            @RequestParam(defaultValue = "0")  int page,
-            @RequestParam(defaultValue = "10") int size) {
+        /**
+         * GET /api/items
+         * Public — paginated list with optional filters.
+         *
+         * @param type     LOST | FOUND
+         * @param status   OPEN | CLAIMED | CLOSED
+         * @param category ELECTRONICS | CLOTHING | BAGS | …
+         * @param keyword  full-text search on title / description / location
+         * @param page     0-based page index (default 0)
+         * @param size     page size (default 10)
+         */
+        @GetMapping
+        public ResponseEntity<Page<ItemDTO>> getAllItems(
+                        @RequestParam(required = false) Item.ItemType type,
+                        @RequestParam(required = false) Item.Status status,
+                        @RequestParam(required = false) Item.Category category,
+                        @RequestParam(required = false) String keyword,
+                        @RequestParam(defaultValue = "0") int page,
+                        @RequestParam(defaultValue = "10") int size) {
 
-        PageRequest pageable = PageRequest.of(
-                page, size, Sort.by("createdAt").descending());
+                PageRequest pageable = PageRequest.of(
+                                page, size, Sort.by("createdAt").descending());
 
-        return ResponseEntity.ok(
-                itemService.getAllItems(type, status, category, keyword, pageable));
-    }
+                return ResponseEntity.ok(
+                                itemService.getAllItems(type, status, category, keyword, pageable));
+        }
 
-    /**
-     * GET /api/items/{id}
-     * Public.
-     */
-    @GetMapping("/{id}")
-    public ResponseEntity<ItemDTO> getItemById(@PathVariable Long id) {
-        return ResponseEntity.ok(itemService.getItemById(id));
-    }
+        /**
+         * GET /api/items/{id}
+         * Public.
+         */
+        @GetMapping("/{id}")
+        public ResponseEntity<ItemDTO> getItemById(@PathVariable Long id) {
+                return ResponseEntity.ok(itemService.getItemById(id));
+        }
 
-    /**
-     * GET /api/items/my
-     * Authenticated — items reported by the current user.
-     */
-    @GetMapping("/my")
-    public ResponseEntity<Page<ItemDTO>> getMyItems(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam(defaultValue = "0")  int page,
-            @RequestParam(defaultValue = "10") int size) {
+        /**
+         * GET /api/items/my
+         * Authenticated — items reported by the current user.
+         */
+        @GetMapping("/my")
+        public ResponseEntity<Page<ItemDTO>> getMyItems(
+                        @AuthenticationPrincipal UserDetails userDetails,
+                        @RequestParam(defaultValue = "0") int page,
+                        @RequestParam(defaultValue = "10") int size) {
 
-        PageRequest pageable = PageRequest.of(
-                page, size, Sort.by("createdAt").descending());
+                String username = extractUsername(userDetails);
+                if (username == null) {
+                        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+                }
 
-        return ResponseEntity.ok(
-                itemService.getMyItems(userDetails.getUsername(), pageable));
-    }
+                PageRequest pageable = PageRequest.of(
+                                page, size, Sort.by("createdAt").descending());
 
-    /**
-     * POST /api/items
-     * Authenticated — report a lost or found item.
-     */
-    @PostMapping
-    public ResponseEntity<ItemDTO> createItem(
-            @Valid @RequestBody ItemDTO dto,
-            @AuthenticationPrincipal UserDetails userDetails) {
+                return ResponseEntity.ok(
+                                itemService.getMyItems(username, pageable));
+        }
 
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(itemService.createItem(dto, userDetails.getUsername()));
-    }
+        /**
+         * POST /api/items
+         * Authenticated — report a lost or found item.
+         */
+        @PostMapping
+        public ResponseEntity<ItemDTO> createItem(
+                        @Valid @RequestBody ItemDTO dto,
+                        @AuthenticationPrincipal UserDetails userDetails) {
 
-    /**
-     * PUT /api/items/{id}
-     * Authenticated — owner or admin only.
-     */
-    @PutMapping("/{id}")
-    public ResponseEntity<ItemDTO> updateItem(
-            @PathVariable Long id,
-            @Valid @RequestBody ItemDTO dto,
-            @AuthenticationPrincipal UserDetails userDetails) {
+                String username = extractUsername(userDetails);
+                if (username == null) {
+                        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+                }
 
-        return ResponseEntity.ok(
-                itemService.updateItem(id, dto, userDetails.getUsername()));
-    }
+                return ResponseEntity
+                                .status(HttpStatus.CREATED)
+                                .body(itemService.createItem(dto, username));
+        }
 
-    /**
-     * DELETE /api/items/{id}
-     * Authenticated — owner or admin only.
-     */
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteItem(
-            @PathVariable Long id,
-            @AuthenticationPrincipal UserDetails userDetails) {
+        /**
+         * PUT /api/items/{id}
+         * Authenticated — owner or admin only.
+         */
+        @PutMapping("/{id}")
+        public ResponseEntity<ItemDTO> updateItem(
+                        @PathVariable Long id,
+                        @Valid @RequestBody ItemDTO dto,
+                        @AuthenticationPrincipal UserDetails userDetails) {
 
-        itemService.deleteItem(id, userDetails.getUsername());
-        return ResponseEntity.noContent().build();
-    }
+                String username = extractUsername(userDetails);
+                if (username == null) {
+                        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+                }
+
+                return ResponseEntity.ok(
+                                itemService.updateItem(id, dto, username));
+        }
+
+        /**
+         * DELETE /api/items/{id}
+         * Authenticated — owner or admin only.
+         */
+        @DeleteMapping("/{id}")
+        public ResponseEntity<Void> deleteItem(
+                        @PathVariable Long id,
+                        @AuthenticationPrincipal UserDetails userDetails) {
+
+                String username = extractUsername(userDetails);
+                if (username == null) {
+                        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+                }
+
+                itemService.deleteItem(id, username);
+                return ResponseEntity.noContent().build();
+        }
+
+        private String extractUsername(UserDetails userDetails) {
+                if (userDetails == null || !StringUtils.hasText(userDetails.getUsername())) {
+                        return null;
+                }
+                return userDetails.getUsername();
+        }
 }

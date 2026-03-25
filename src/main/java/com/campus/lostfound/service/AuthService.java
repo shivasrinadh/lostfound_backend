@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
+@SuppressWarnings("null")
 public class AuthService {
 
     private final UserRepository userRepository;

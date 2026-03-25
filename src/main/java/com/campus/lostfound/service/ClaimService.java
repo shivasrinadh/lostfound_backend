@@ -21,9 +21,11 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
+@SuppressWarnings("null")
 public class ClaimService {
 
     private final ClaimRepository claimRepository;
@@ -31,8 +33,8 @@ public class ClaimService {
     private final UserRepository userRepository;
 
     public ClaimService(ClaimRepository claimRepository,
-                        ItemRepository itemRepository,
-                        UserRepository userRepository) {
+            ItemRepository itemRepository,
+            UserRepository userRepository) {
         this.claimRepository = claimRepository;
         this.itemRepository = itemRepository;
         this.userRepository = userRepository;
@@ -40,9 +42,9 @@ public class ClaimService {
 
     @Transactional
     public ClaimDTO submitClaim(ClaimDTO dto,
-                                MultipartFile document,
-                                MultipartFile image,
-                                String username) {
+            MultipartFile document,
+            MultipartFile image,
+            String username) {
 
         if (dto == null) {
             throw new IllegalArgumentException("Claim payload is required");
@@ -90,7 +92,8 @@ public class ClaimService {
             claim.setImagePath(imagePath);
         }
 
-        return ClaimDTO.fromEntity(claimRepository.save(claim));
+        Claim savedClaim = Objects.requireNonNull(claimRepository.save(claim));
+        return ClaimDTO.fromEntity(savedClaim);
     }
 
     private String saveFile(MultipartFile file, String folderType) {
@@ -99,7 +102,7 @@ public class ClaimService {
                 return null;
             }
 
-            String originalName = file.getOriginalFilename();
+            String originalName = Objects.toString(file.getOriginalFilename(), "");
             String safeName = StringUtils.hasText(originalName)
                     ? originalName.replaceAll("[\\\\/:*?\"<>|\\s]+", "_")
                     : "file";
@@ -129,7 +132,9 @@ public class ClaimService {
 
     public Page<ClaimDTO> getMyClaims(String username, Pageable pageable) {
         User user = findUser(username);
-        return claimRepository.findByClaimedById(user.getId(), pageable)
+        Long userId = Objects.requireNonNull(user.getId());
+        Pageable safePageable = Objects.requireNonNull(pageable);
+        return claimRepository.findByClaimedById(userId, safePageable)
                 .map(ClaimDTO::fromEntity);
     }
 
@@ -143,9 +148,9 @@ public class ClaimService {
 
     @Transactional
     public ClaimDTO resolveClaim(Long claimId,
-                                 Claim.ClaimStatus resolution,
-                                 String adminNote,
-                                 String adminUsername) {
+            Claim.ClaimStatus resolution,
+            String adminNote,
+            String adminUsername) {
 
         User admin = findUser(adminUsername);
 
@@ -167,19 +172,22 @@ public class ClaimService {
         if (resolution == Claim.ClaimStatus.APPROVED) {
             Item item = claim.getItem();
             item.setStatus(Item.Status.CLAIMED);
-            itemRepository.save(item);
+            Objects.requireNonNull(itemRepository.save(item));
 
-            claimRepository.findByItemId(item.getId()).stream()
-                    .filter(c -> c.getStatus() == Claim.ClaimStatus.PENDING && !c.getId().equals(claimId))
+            Long itemId = Objects.requireNonNull(item.getId());
+            claimRepository.findByItemId(itemId).stream()
+                    .filter(c -> c.getStatus() == Claim.ClaimStatus.PENDING
+                            && !Objects.requireNonNull(c.getId()).equals(claimId))
                     .forEach(c -> {
                         c.setStatus(Claim.ClaimStatus.REJECTED);
                         c.setAdminNote("Another claim was approved for this item");
                         c.setResolvedAt(LocalDateTime.now());
-                        claimRepository.save(c);
+                        Objects.requireNonNull(claimRepository.save(c));
                     });
         }
 
-        return ClaimDTO.fromEntity(claimRepository.save(claim));
+        Claim saved = Objects.requireNonNull(claimRepository.save(claim));
+        return ClaimDTO.fromEntity(saved);
     }
 
     private User findUser(String username) {
