@@ -69,11 +69,13 @@ public class AuthService {
     // ── Login ─────────────────────────────────────────────────────────
 
     public Map<String, Object> login(LoginRequest request) {
+        String username = request.getUsername().trim();
+
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        request.getUsername(), request.getPassword()));
+                        username, request.getPassword()));
 
-        User user = userRepository.findByUsername(request.getUsername())
+        User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         String token = generateToken(user);
